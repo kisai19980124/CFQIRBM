@@ -1,5 +1,6 @@
 from dwave.system.samplers import DWaveSampler  # Library to interact with the QPU
 from dwave.system.composites import FixedEmbeddingComposite  # Library to embed our problem onto the QPU physical graph
+from dwave.system.composites import EmbeddingComposite
 from dimod.binary_quadratic_model import BinaryQuadraticModel
 import minorminer
 import numpy as np
@@ -13,9 +14,9 @@ class Sampler(object):
     """
 
     def __init__(self, num_copies=1):
-        self.endpoint = 'YOUR URL'
-        self.token = 'YOUR TOKEN'
-        self.solver = 'YOUR SOLVER'
+        self.endpoint = 'https://cloud.dwavesys.com/sapi'
+        self.token = 'DEV-db4d47e5313cf3c52cac31dace7c5080a5ffc46d'
+        self.solver = 'DW_2000Q_2_1'
         self.gamma = 1400
         self.chainstrength = 4700
         self.num_copies = num_copies
@@ -28,6 +29,7 @@ class Sampler(object):
         :type qubo: numpy dictionary
         :return: samples, energy, num_occurrences
         """
+        #print(Q)
         self.num_samps = num_samps
 
         if not hasattr(self, 'sampler'):
@@ -47,8 +49,16 @@ class Sampler(object):
                 raise ValueError("no embedding found")
 
             self.sampler = FixedEmbeddingComposite(self.child, embedding)
-
-        response = self.sampler.sample_qubo(Q, chain_strength=self.chainstrength, num_reads=self.num_samps)
-
-        return np.array(response.__dict__['_samples_matrix'].tolist()), response.__dict__['_data_vectors']["energy"], \
-               response.__dict__['_data_vectors']["num_occurrences"]
+        response = EmbeddingComposite(DWaveSampler(token="DEV-db4d47e5313cf3c52cac31dace7c5080a5ffc46d")).sample_qubo(Q, num_reads=1000)
+        #response = self.sampler.sample_qubo(Q, chain_strength=self.chainstrength, num_reads=self.num_samps)
+        #for sample, energy, num_occurrences, chain_break_fraction in list(response.data()):
+        #    print(sample, "Energy: ", energy, "Occurrences: ", num_occurrences)
+        #print(response.samples()[0,[range(0,71)]])
+        #print(response._asdict()['vectors']['energy'])
+        #print(response._asdict()['vectors']['num_occurrences'])
+        saempeul=np.empty((0,72))
+        for sample, in response.data(fields=['sample']):
+            saempeul=np.append(saempeul, sample)
+        #print(saempeul)
+        return saempeul, response._asdict()['vectors']['energy']['data'], \
+               response._asdict()['vectors']['num_occurrences']['data']

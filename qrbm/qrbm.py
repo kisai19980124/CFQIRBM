@@ -98,6 +98,9 @@ class QRBM:
 
         self.samples, self.energies, self.num_occurrences = self.sampler.sample_qubo(Q, num_samps = num_samps)
         self.energies /= np.max(np.abs(self.energies))
+        print(self.samples)
+        print(self.energies)
+        print(self.num_occurrences)
 
         return self.samples
 
@@ -123,20 +126,24 @@ class QRBM:
                 continue
 
             predictions_dict = {}
-
+            
             sample_idx = 0
             for sample, energy in zip(self.samples, self.energies):
-
-                values_in_sample_which_should_be_clamped = sample[sample_idx_to_clamp]
-
+                risuto=[]
+                for k in sample_idx_to_clamp:
+                    risuto.append(sample[k])
+                #values_in_sample_which_should_be_clamped = sample[sample_idx_to_clamp]
+                values_in_sample_which_should_be_clamped=risuto
                 if type(values_in_sample_which_should_be_clamped) != list:
                     values_in_sample_which_should_be_clamped = values_in_sample_which_should_be_clamped.tolist()
                 if type(sample_value_to_clamp) != list:
                     sample_value_to_clamp = sample_value_to_clamp.tolist()
                 if values_in_sample_which_should_be_clamped != sample_value_to_clamp:
                     continue
-
-                y = sample[range_to_predict_start:range_to_predict_end]
+                y=np.empty(0,dtype = np.int8)
+                for k in range(range_to_predict_start,range_to_predict_end):
+                    y=np.append(y,sample[k])
+                #y = sample[range_to_predict_start:range_to_predict_end]
                 y_str = ','.join(str(y))
                 if y_str in predictions_dict:
                     predictions_dict[y_str] += np.exp(-1.0 * energy) / self.Z
@@ -155,9 +162,13 @@ class QRBM:
             if predictions_dict == None or len(predictions_dict) == 0:
                 prediction = np.random.randint(2)
             else:
-                prediction_with_max_probability_tuple = max(predictions_dict.iteritems(), key=operator.itemgetter(1))
+                print(predictions_dict.items())
+                prediction_with_max_probability_tuple = max(predictions_dict.items(), key=operator.itemgetter(1))
                 # print "max_y_probability_tuple: ",max_y_probability_tuple
                 prediction = prediction_with_max_probability_tuple[0].split(',')[1:-1]  # [1:-1] cuts square brackets
+                
+                print(prediction)
+                #prediction.remove('.')
                 prediction = [int(y) for y in prediction][0]  # only 1 digit
             predictions.append(prediction)
         return predictions
@@ -181,7 +192,7 @@ class QRBM:
                 predictions.append(None)
                 continue
 
-            max_y_probability_tuple = max(predictions_dict.iteritems(), key=operator.itemgetter(1))
+            max_y_probability_tuple = max(predictions_dict.items(), key=operator.itemgetter(1))
             max_y = max_y_probability_tuple[0].split(',')[1:-1]  # [1:-1] cuts square brackets
             max_y = [int(y) for y in max_y]
             max_y_probability = max_y_probability_tuple[1]
@@ -210,10 +221,10 @@ class QRBM:
         """
         if len_y != 0:
             random_idx_to_predict = np.random.randint(len(training_data))
-            print "Initial state, predicting data ", [
+            print ("Initial state, predicting data ", [
                 training_data[random_idx_to_predict][:len_x]], "result to be:", self.predict_from_qubo(
-                [training_data[random_idx_to_predict][:len_x]], num_samps=num_sams_for_test)
-            print "--------------------------"
+                [training_data[random_idx_to_predict][:len_x]], num_samps=num_sams_for_test))
+            print ("--------------------------")
 
         for epoch in self.tqdm(range(epochs)):
             # single step
@@ -224,7 +235,7 @@ class QRBM:
 
             v = training_data[random_selected_training_data_idx]
             if print_training_data:
-                print "epoch #", self.n_epoch, "   training data:", v
+                print ("epoch #", self.n_epoch, "   training data:", v)
             # # 1.2 compute the probabilities of the hidden units
             clamped_idx = range(self.n_visible)
             clamped_values = v
@@ -331,10 +342,10 @@ class QRBM:
             # show training progress
             if epoch % epochs_to_test == 0 and len_y != 0:
                 random_idx_to_predict = np.random.randint(len(training_data))
-                print "predicting data ", [
+                print ("predicting data ", [
                     training_data[random_idx_to_predict][:len_x]], "result to be:", self.predict_from_qubo(
-                    [training_data[random_idx_to_predict][:len_x]], num_samps=num_sams_for_test)
-                print "--------------------------"
+                    [training_data[random_idx_to_predict][:len_x]], num_samps=num_sams_for_test))
+                print ("--------------------------")
             if epochs_to_test != -1 and epoch % epochs_to_test == 0 and len_y == 0:
                 self.sample_qubo()
                 sample = self.samples[0]
@@ -342,20 +353,25 @@ class QRBM:
                     plt.figure()
                     plt.axis('off')
                     plt.title("Image reconstructed after training " + str(epoch + 1) + " epochs", y=1.03)
-
-                    plt.imshow(sample[:len_x].reshape(self.image_height, -1))
+                    ar=np.empty(0)
+                    for k in range (len_x):
+                        ar=np.append(ar,sample[k])
+                    plt.imshow(ar.reshape(self.image_height, -1))
                 else:
-                    print "sampling data to be", sample[:self.n_visible]
+                    print ("sampling data to be", sample[:self.n_visible])
 
             original = training_data[0]
-            samples = self.samples[0][:self.n_visible]
+            samples=np.empty(0)
+            for k in range (self.n_visible):
+                samples=np.append(samples,self.samples[0][k])
+            #samples = self.samples[0][:self.n_visible]
             if type(original) != list:
                 original = original.tolist()
             if type(samples) != list:
                 samples = samples.tolist()
 
             if original == samples:
-                print "Stopped training early because the model can reconstruct the inputs"
+                print ("Stopped training early because the model can reconstruct the inputs")
                 break
 
             self.n_epoch += 1
